@@ -13,8 +13,7 @@ type HealthHandler struct {
 }
 
 func (h *HealthHandler) Check(w http.ResponseWriter, r *http.Request) {
-    // Don't just return 200 — actually verify the DB is reachable.
-    // A health check that doesn't check dependencies is a lie.
+    // Verify the DB is reachable.
     if err := h.DB.Ping(context.Background()); err != nil {
         w.WriteHeader(http.StatusServiceUnavailable)
         json.NewEncoder(w).Encode(map[string]string{

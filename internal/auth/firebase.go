@@ -11,7 +11,7 @@ import (
 )
 
 // Client wraps the Firebase auth client.
-// We initialize it once on startup and reuse it — same principle as the DB pool.
+// We initialize it once on startup and reuse it (same principle as the DB pool)
 type Client struct {
     firebaseAuth *auth.Client
 }
@@ -35,8 +35,8 @@ func NewClient(ctx context.Context) (*Client, error) {
     return &Client{firebaseAuth: authClient}, nil
 }
 
-// VerifyToken validates a Firebase JWT and returns the user's Firebase UID.
-// This is called on every authenticated request.
+// VerifyToken validates a Firebase JWT and returns the user's Firebase UID
+// Called on every authenticated request
 func (c *Client) VerifyToken(ctx context.Context, idToken string) (string, error) {
     token, err := c.firebaseAuth.VerifyIDToken(ctx, idToken)
     if err != nil {

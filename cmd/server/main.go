@@ -17,7 +17,7 @@ import (
 )
 
 func main() {
-    // Load .env file. In production this would be real env vars —
+    // Load .env file. In production this would be real env vars 
     // godotenv is a dev convenience, not a production dependency.
     if err := godotenv.Load(); err != nil {
         log.Println("No .env file found, reading from environment")

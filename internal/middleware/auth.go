@@ -10,7 +10,7 @@ import (
     "github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Context keys — typed to avoid collisions with other middleware
+// Context keys (typed to avoid collisions with other middleware)
 type contextKey string
 
 const (
@@ -25,7 +25,7 @@ type AuthMiddleware struct {
 
 func (m *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        // 1. Extract token from Authorization header
+        // Extract token from Authorization header
         authHeader := r.Header.Get("Authorization")
         if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
             writeUnauthorized(w, "missing authorization header")
@@ -33,14 +33,14 @@ func (m *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
         }
         idToken := strings.TrimPrefix(authHeader, "Bearer ")
 
-        // 2. Verify with Firebase
+        // Verify with Firebase
         firebaseUID, err := m.Firebase.VerifyToken(r.Context(), idToken)
         if err != nil {
             writeUnauthorized(w, "invalid token")
             return
         }
 
-        // 3. Look up internal user ID from your users table
+        // Look up internal user ID from users table
         var userID string
         err = m.DB.QueryRow(r.Context(),
             "SELECT id FROM users WHERE firebase_uid = $1",
@@ -48,13 +48,13 @@ func (m *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
         ).Scan(&userID)
 
         if err != nil {
-            // User authenticated with Firebase but doesn't exist in our DB yet.
-            // This happens on first login — we'll handle registration separately.
+            // User authenticated with Firebase but doesn't exist in DB yet.
+            // This happens on first login (handle registration separately)
             writeUnauthorized(w, "user not registered")
             return
         }
 
-        // 4. Attach to context so handlers can access it
+        // Attach to context so handlers can access it
         ctx := context.WithValue(r.Context(), ContextKeyUserID, userID)
         ctx = context.WithValue(ctx, ContextKeyFirebaseUID, firebaseUID)
 
