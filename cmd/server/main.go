@@ -42,6 +42,7 @@ func main() {
     // Wire up handlers
     healthHandler := &handlers.HealthHandler{DB: pool}
 	userHandler := &handlers.UserHandler{DB: pool}
+    messageHandler := &handlers.MessageHandler{DB: pool}
     authMiddleware := &custommiddleware.AuthMiddleware{
     Firebase: firebaseClient,
     DB:       pool,
@@ -56,7 +57,8 @@ func main() {
     r.Get("/health", healthHandler.Check)
 	// Protected routes - auth middleware applied
 	r.Group(func(r chi.Router) {
-    r.Use(authMiddleware.Authenticate)
+        r.Use(authMiddleware.Authenticate)
+        r.Post("/messages", messageHandler.Create)
     // TODO: future endpoints go here
 	})
 
