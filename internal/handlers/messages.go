@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	appMiddleware "github.com/YOURUSERNAME/myceli/internal/middleware"
+	appMiddleware "github.com/mayamengya/myceli/internal/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
