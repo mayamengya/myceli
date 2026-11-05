@@ -53,11 +53,13 @@ func main() {
     r.Use(middleware.Logger)    // logs every request
     r.Use(middleware.Recoverer) // catches panics, returns 500
 	r.Get("/health", healthHandler.Check)
-	r.Post("/users/register", userHandler.Register) // public — no auth required
-    r.Get("/health", healthHandler.Check)
-	// Protected routes - auth middleware applied
+
+	// Register needs a valid Firebase token but no users row yet (it creates it).
+	r.With(authMiddleware.VerifyToken).Post("/users/register", userHandler.Register)
+
+	// Protected routes: valid token AND a registered user
 	r.Group(func(r chi.Router) {
-        r.Use(authMiddleware.Authenticate)
+        r.Use(authMiddleware.VerifyToken, authMiddleware.RequireUser)
         r.Post("/messages", messageHandler.Create)
     // TODO: future endpoints go here
 	})

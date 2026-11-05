@@ -23,7 +23,10 @@ type AuthMiddleware struct {
     DB       *pgxpool.Pool
 }
 
-func (m *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
+// VerifyToken checks the Firebase ID token in the Authorization header and
+// stores the verified Firebase UID in context. It does not require the user
+// to exist in our DB, so it can protect /users/register.
+func (m *AuthMiddleware) VerifyToken(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         // Extract token from Authorization header
         authHeader := r.Header.Get("Authorization")
@@ -40,24 +43,38 @@ func (m *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
             return
         }
 
+        ctx := context.WithValue(r.Context(), ContextKeyFirebaseUID, firebaseUID)
+        next.ServeHTTP(w, r.WithContext(ctx))
+    })
+}
+
+// RequireUser looks up the internal users.id for the verified Firebase UID
+// and stores it in context. Must run after VerifyToken.
+func (m *AuthMiddleware) RequireUser(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        firebaseUID, ok := r.Context().Value(ContextKeyFirebaseUID).(string)
+        if !ok || firebaseUID == "" {
+            // VerifyToken didn't run: a wiring bug in main.go, not a client error.
+            w.Header().Set("Content-Type", "application/json")
+            w.WriteHeader(http.StatusInternalServerError)
+            json.NewEncoder(w).Encode(map[string]string{"error": "internal server error"})
+            return
+        }
+
         // Look up internal user ID from users table
         var userID string
-        err = m.DB.QueryRow(r.Context(),
+        err := m.DB.QueryRow(r.Context(),
             "SELECT id FROM users WHERE firebase_uid = $1",
             firebaseUID,
         ).Scan(&userID)
 
         if err != nil {
-            // User authenticated with Firebase but doesn't exist in DB yet.
-            // This happens on first login (handle registration separately)
+            // User authenticated with Firebase but hasn't called /users/register yet.
             writeUnauthorized(w, "user not registered")
             return
         }
 
-        // Attach to context so handlers can access it
         ctx := context.WithValue(r.Context(), ContextKeyUserID, userID)
-        ctx = context.WithValue(ctx, ContextKeyFirebaseUID, firebaseUID)
-
         next.ServeHTTP(w, r.WithContext(ctx))
     })
 }
